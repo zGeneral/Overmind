@@ -72,6 +72,13 @@ export let OverlordPriority = {
 		roomIncrement: 5,
 	},
 
+	powerMine: {
+		cool : 1050,
+		drill : 1051,
+		gather : 604,
+		roomIncrement: 5,
+	},
+
 	collection: {				// Non-urgent collection of resources, like from a deserted storage
 		haul: 1100
 	},

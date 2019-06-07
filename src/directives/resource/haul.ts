@@ -10,7 +10,7 @@ interface DirectiveHaulMemory extends FlagMemory {
 
 
 /**
- * Hauling directive: spawns hauler creeps to move large amounts of resourecs from a location (e.g. draining a storage)
+ * Hauling directive: spawns hauler creeps to move large amounts of resources from a location (e.g. draining a storage)
  */
 @profile
 export class DirectiveHaul extends Directive {
@@ -21,6 +21,7 @@ export class DirectiveHaul extends Directive {
 
 	private _store: StoreDefinition;
 	private _drops: { [resourceType: string]: Resource[] };
+	private _finishAtTime: number;
 
 	memory: DirectiveHaulMemory;
 
@@ -107,6 +108,10 @@ export class DirectiveHaul extends Directive {
 
 	run(): void {
 		if (_.sum(this.store) == 0 && this.pos.isVisible) {
+			// If everything is picked up, crudely give enough time to bring it back
+			this._finishAtTime = this._finishAtTime || (Game.time + 300);
+		}
+		if (Game.time >= this._finishAtTime) {
 			this.remove();
 		}
 	}

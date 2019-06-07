@@ -21,7 +21,12 @@ interface Memory {
 		operationMode: operationMode;
 		log: LoggerMemory;
 		enableVisuals: boolean;
-	};
+		powerCollection: {
+			enabled: boolean;
+			maxRange: number;
+			minPower: number;
+		};
+	}
 	profiler?: any;
 	stats: any;
 	constructionSites: { [id: string]: number };
