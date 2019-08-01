@@ -3,6 +3,7 @@ import {$} from './caching/GlobalCache';
 import {log} from './console/log';
 import {StoreStructure} from './declarations/typeGuards';
 import {DirectiveExtract} from './directives/resource/extract';
+import {DirectivePoisonRoom} from './directives/offense/poisonRoom';
 import {_HARVEST_MEM_DOWNTIME, _HARVEST_MEM_USAGE, DirectiveHarvest} from './directives/resource/harvest';
 import {HiveCluster} from './hiveClusters/_HiveCluster';
 import {CommandCenter} from './hiveClusters/commandCenter';
@@ -311,7 +312,7 @@ export class Colony {
 		$.set(this, 'sources', () => _.sortBy(_.flatten(_.map(this.rooms, room => room.sources)),
 											  source => source.pos.getMultiRoomRangeTo(this.pos)));
 		for (const source of this.sources) {
-			DirectiveHarvest.createIfNotPresent(source.pos, 'pos');
+			!DirectivePoisonRoom.isPresent(source.pos, 'room') && DirectiveHarvest.createIfNotPresent(source.pos, 'pos');
 		}
 		$.set(this, 'extractors', () =>
 			_(this.rooms)
@@ -320,7 +321,7 @@ export class Colony {
 				.filter(e => (e!.my && e!.room.my)
 							 || Cartographer.roomType(e!.room.name) != ROOMTYPE_CONTROLLER)
 				.sortBy(e => e!.pos.getMultiRoomRangeTo(this.pos)).value() as StructureExtractor[]);
-		if (this.controller.level >= 6) {
+		if (this.controller.level >= 6 && this.terminal) {
 			_.forEach(this.extractors, extractor => DirectiveExtract.createIfNotPresent(extractor.pos, 'pos'));
 		}
 		$.set(this, 'repairables', () => _.flatten(_.map(this.rooms, room => room.repairables)));
@@ -546,6 +547,13 @@ export class Colony {
 		return allAssets;
 	}
 
+	private runPowerSpawn() {
+		if (this.powerSpawn && this.assets.energy > 300000 && this.powerSpawn.energy > 50
+			&& this.powerSpawn.power > 0) {
+			this.powerSpawn.processPower();
+		}
+	}
+
 	/**
 	 * Initializes the state of the colony each tick
 	 */
@@ -567,6 +575,7 @@ export class Colony {
 		this.linkNetwork.run();												// Run the link network
 		this.roadLogistics.run();											// Run the road network
 		this.roomPlanner.run();												// Run the room planner
+		this.runPowerSpawn();												// Run power spawn - short term
 		this.stats();														// Log stats per tick
 	}
 

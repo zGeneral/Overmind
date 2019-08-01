@@ -472,6 +472,14 @@ export abstract class Overlord {
 		}
 	}
 
+	getZerg() {
+		return this._zerg;
+	}
+
+	getCombatZerg() {
+		return this._combatZerg;
+	}
+
 	/**
 	 * Request any needed boosting resources from terminal network
 	 */

@@ -135,12 +135,16 @@ export class CommandCenter extends HiveCluster {
 			}
 		}
 		// Refill power spawn
-		if (this.powerSpawn && this.powerSpawn.energy < this.powerSpawn.energyCapacity) {
-			this.transportRequests.requestInput(this.powerSpawn, Priority.NormalLow);
+		if (this.powerSpawn) {
+			if (this.powerSpawn.energy < this.powerSpawn.energyCapacity) {
+				this.transportRequests.requestInput(this.powerSpawn, Priority.NormalLow);
+			} else if (this.powerSpawn.power < this.powerSpawn.powerCapacity) {
+				this.transportRequests.requestInput(this.powerSpawn, Priority.Low, {resourceType: RESOURCE_POWER});
+			}
 		}
 		// Refill nuker with low priority
 		if (this.nuker) {
-			if (this.nuker.energy < this.nuker.energyCapacity && this.storage.energy > 200000) {
+			if (this.nuker.energy < this.nuker.energyCapacity && this.storage.energy > 200000 && this.nuker.cooldown <= 1000) {
 				this.transportRequests.requestInput(this.nuker, Priority.Low);
 			}
 			if (this.nuker.ghodium < this.nuker.ghodiumCapacity

@@ -1,5 +1,5 @@
 import {CombatIntel} from '../intel/CombatIntel';
-import {Movement, NO_ACTION} from '../movement/Movement';
+import {CombatMoveOptions, Movement, MoveOptions, NO_ACTION} from '../movement/Movement';
 import {profile} from '../profiler/decorator';
 import {insideBunkerBounds} from '../roomPlanner/layouts/bunker';
 import {CombatTargeting} from '../targeting/CombatTargeting';
@@ -163,7 +163,7 @@ export class CombatZerg extends Zerg {
 	 */
 	autoRanged(possibleTargets = this.room.hostiles, allowMassAttack = true) {
 		const target = CombatTargeting.findBestCreepTargetInRange(this, 3, possibleTargets)
-					   || CombatTargeting.findBestStructureTargetInRange(this, 3);
+					   || CombatTargeting.findBestStructureTargetInRange(this, 3,false); //disabled allowUnowned structure attack in order not to desrtory poison walls
 		this.debug(`Ranged target: ${target}`);
 		if (target) {
 			if (allowMassAttack
@@ -180,7 +180,7 @@ export class CombatZerg extends Zerg {
 	 */
 	autoHeal(allowRangedHeal = true, friendlies = this.room.creeps) {
 		const target = CombatTargeting.findBestHealingTargetInRange(this, allowRangedHeal ? 3 : 1, friendlies);
-		this.debug(`Heal taget: ${target}`);
+		this.debug(`Heal target: ${target}`);
 		if (target) {
 			if (this.pos.getRangeTo(target) <= 1) {
 				return this.heal(target);
@@ -228,7 +228,7 @@ export class CombatZerg extends Zerg {
 	/**
 	 * Navigate to a room, then engage hostile creeps there, perform medic actions, etc.
 	 */
-	autoCombat(roomName: string, verbose = false) {
+	autoCombat(roomName: string, verbose = false, preferredRange?: number, options?: CombatMoveOptions) {
 
 		// Do standard melee, ranged, and heal actions
 		if (this.getActiveBodyparts(ATTACK) > 0) {
@@ -256,7 +256,7 @@ export class CombatZerg extends Zerg {
 		// Fight within the room
 		const target = CombatTargeting.findTarget(this);
 		const preferRanged = this.getActiveBodyparts(RANGED_ATTACK) > this.getActiveBodyparts(ATTACK);
-		const targetRange = preferRanged ? 3 : 1;
+		const targetRange = preferredRange || preferRanged ? 3 : 1;
 		this.debug(`${target}, ${targetRange}`);
 		if (target) {
 			const avoid = [];
@@ -264,10 +264,10 @@ export class CombatZerg extends Zerg {
 			if (preferRanged) {
 				const meleeHostiles = _.filter(this.room.hostiles, h => CombatIntel.getAttackDamage(h) > 0);
 				for (const hostile of meleeHostiles) {
-					avoid.push({pos: hostile.pos, range: 2});
+					avoid.push({pos: hostile.pos, range: targetRange - 1});
 				}
 			}
-			return Movement.combatMove(this, [{pos: target.pos, range: targetRange}], []);
+			return Movement.combatMove(this, [{pos: target.pos, range: targetRange}], avoid, options);
 		}
 
 	}

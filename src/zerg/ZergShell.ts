@@ -8,6 +8,7 @@ import {profile} from '../profiler/decorator';
 import {initializeTask} from '../tasks/initializer';
 import {Task} from '../tasks/Task';
 import {NEW_OVERMIND_INTERVAL} from '../~settings';
+import {PowerZerg} from "./PowerZerg";
 
 export function getOverlord(creep: Zerg | Creep): Overlord | null {
 	if (creep.memory[_MEM.OVERLORD]) {
@@ -87,7 +88,7 @@ const RANGES = {
 @profile
 export class Zerg {
 
-	creep: Creep; 						// The creep that this wrapper class will control
+	creep: Creep | PowerZerg; 						// The creep that this wrapper class will control
 	body: BodyPartDefinition[];    	 	// These properties are all wrapped from this.creep.* to this.*
 	carry: StoreDefinition;				// |
 	carryCapacity: number;				// |
@@ -196,59 +197,9 @@ export class Zerg {
 		return '<a href="#!/room/' + Game.shard.name + '/' + this.pos.roomName + '">[' + this.name + ']</a>';
 	}
 
-	// Wrapped creep methods ===========================================================================================
-
-	attack(target: Creep | Structure) {
-		const result = this.creep.attack(target);
-		if (result == OK) {
-			this.actionLog.attack = true;
-			if (isCreep(target)) {
-				if (target.hitsPredicted == undefined) target.hitsPredicted = target.hits;
-				target.hitsPredicted -= CombatIntel.predictedDamageAmount(this.creep, target, 'attack');
-				// account for hitback effects
-				if (this.creep.hitsPredicted == undefined) this.creep.hitsPredicted = this.creep.hits;
-				this.creep.hitsPredicted -= CombatIntel.predictedDamageAmount(target, this.creep, 'attack');
-			}
-			if (this.memory.talkative) this.say(`💥`);
-		}
-		return result;
-	}
-
-	attackController(controller: StructureController) {
-		const result = this.creep.attackController(controller);
-		if (!this.actionLog.attackController) this.actionLog.attackController = (result == OK);
-		return result;
-	}
-
-	build(target: ConstructionSite) {
-		const result = this.creep.build(target);
-		if (!this.actionLog.build) this.actionLog.build = (result == OK);
-		return result;
-	}
-
-	goBuild(target: ConstructionSite) {
-		if (this.pos.inRangeToPos(target.pos, RANGES.BUILD)) {
-			return this.build(target);
-		} else {
-			return this.goTo(target);
-		}
-	}
-
 	cancelOrder(methodName: string): OK | ERR_NOT_FOUND {
 		const result = this.creep.cancelOrder(methodName);
 		if (result == OK) this.actionLog[methodName] = false;
-		return result;
-	}
-
-	claimController(controller: StructureController) {
-		const result = this.creep.claimController(controller);
-		if (!this.actionLog.claimController) this.actionLog.claimController = (result == OK);
-		return result;
-	}
-
-	dismantle(target: Structure): CreepActionReturnCode {
-		const result = this.creep.dismantle(target);
-		if (!this.actionLog.dismantle) this.actionLog.dismantle = (result == OK);
 		return result;
 	}
 
@@ -307,52 +258,6 @@ export class Zerg {
 		return result;
 	}
 
-	rangedAttack(target: Creep | Structure) {
-		const result = this.creep.rangedAttack(target);
-		if (result == OK) {
-			this.actionLog.rangedAttack = true;
-			if (isCreep(target)) {
-				if (target.hitsPredicted == undefined) target.hitsPredicted = target.hits;
-				target.hitsPredicted -= CombatIntel.predictedDamageAmount(this, target, 'rangedAttack');
-			}
-			if (this.memory.talkative) this.say(`🔫`);
-		}
-		return result;
-	}
-
-	rangedMassAttack() {
-		const result = this.creep.rangedMassAttack();
-		if (result == OK) {
-			this.actionLog.rangedMassAttack = true;
-			for (const target of this.pos.findInRange(this.room.hostiles, 3)) {
-				if (target.hitsPredicted == undefined) target.hitsPredicted = target.hits;
-				target.hitsPredicted -= CombatIntel.getMassAttackDamageTo(this, target);
-			}
-			if (this.memory.talkative) this.say(`💣`);
-		}
-		return result;
-	}
-
-	repair(target: Structure) {
-		const result = this.creep.repair(target);
-		if (!this.actionLog.repair) this.actionLog.repair = (result == OK);
-		return result;
-	}
-
-	goRepair(target: Structure) {
-		if (this.pos.inRangeToPos(target.pos, RANGES.REPAIR)) {
-			return this.repair(target);
-		} else {
-			return this.goTo(target);
-		}
-	}
-
-	reserveController(controller: StructureController) {
-		const result = this.creep.reserveController(controller);
-		if (!this.actionLog.reserveController) this.actionLog.reserveController = (result == OK);
-		return result;
-	}
-
 	/* Say a message; maximum message length is 10 characters */
 	say(message: string, pub?: boolean) {
 		return this.creep.say(message, pub);
@@ -366,45 +271,6 @@ export class Zerg {
 
 	suicide() {
 		return this.creep.suicide();
-	}
-
-	upgradeController(controller: StructureController) {
-		const result = this.creep.upgradeController(controller);
-		if (!this.actionLog.upgradeController) this.actionLog.upgradeController = (result == OK);
-		// Determine amount of upgrade power
-		// let weightedUpgraderParts = _.map(this.boostCounts, )
-		// let upgradeAmount = this.getActiveBodyparts(WORK) * UPGRADE_CONTROLLER_POWER;
-		// let upgrade
-
-		// Stats.accumulate(`colonies.${this.colony.name}.rcl.progressTotal`, upgradeAmount);
-		return result;
-	}
-
-	heal(target: Creep | Zerg, rangedHealInstead = false) {
-		if (rangedHealInstead && !this.pos.isNearTo(target)) {
-			return this.rangedHeal(target);
-		}
-		const creep = toCreep(target);
-		const result = this.creep.heal(creep);
-		if (result == OK) {
-			this.actionLog.heal = true;
-			if (creep.hitsPredicted == undefined) creep.hitsPredicted = creep.hits;
-			creep.hitsPredicted += CombatIntel.getHealAmount(this);
-			if (this.memory.talkative) this.say('🚑');
-		}
-		return result;
-	}
-
-	rangedHeal(target: Creep | Zerg) {
-		const creep = toCreep(target);
-		const result = this.creep.rangedHeal(creep);
-		if (result == OK) {
-			this.actionLog.rangedHeal = true;
-			if (creep.hitsPredicted == undefined) creep.hitsPredicted = creep.hits;
-			creep.hitsPredicted += CombatIntel.getRangedHealAmount(this);
-			if (this.memory.talkative) this.say(`💉`);
-		}
-		return result;
 	}
 
 	transfer(target: Creep | Zerg | Structure, resourceType: ResourceConstant = RESOURCE_ENERGY, amount?: number) {
@@ -511,17 +377,6 @@ export class Zerg {
 		setOverlord(this, newOverlord);
 	}
 
-	// TODO add retire/reassignment logic
-	// Eg. creep get repurposed, it gets recycled, etc
-	/**
-	 * When a zerg has no more use for it's current overlord, it will be retired.
-	 * For now, that means RIP
-	 */
-	retire() {
-		this.say('💀 RIP 💀', true);
-		return this.suicide();
-	}
-
 	/* Reassigns the creep to work under a new overlord and as a new role. */
 	reassign(newOverlord: Overlord | null, newRole: string, invalidateTask = true) {
 		this.overlord = newOverlord;
@@ -601,20 +456,12 @@ export class Zerg {
 	/**
 	 * Colony that the creep belongs to.
 	 */
-	get colony(): Colony | null {
-		if (this.memory[_MEM.COLONY] != null) {
-			return Overmind.colonies[this.memory[_MEM.COLONY] as string];
-		} else {
-			return null;
-		}
+	get colony(): Colony {
+		return Overmind.colonies[this.memory[_MEM.COLONY]];
 	}
 
-	set colony(newColony: Colony | null) {
-		if (newColony != null) {
-			this.memory[_MEM.COLONY] = newColony.name;
-		} else {
-			this.memory[_MEM.COLONY] = null;
-		}
+	set colony(newColony: Colony) {
+		this.memory[_MEM.COLONY] = newColony.name;
 	}
 
 	/**
@@ -730,8 +577,6 @@ export class Zerg {
 	moveOffExitToward(pos: RoomPosition, detour = true): number | undefined {
 		return Movement.moveOffExitToward(this, pos, detour);
 	}
-
-
 
 	// Miscellaneous fun stuff -----------------------------------------------------------------------------------------
 

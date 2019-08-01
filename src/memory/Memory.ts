@@ -191,6 +191,9 @@ export class Mem {
 		if (!Memory.settings) {
 			Memory.settings = {} as any;
 		}
+		if (!Memory.playerCreepTracker) {
+			Memory.playerCreepTracker = {};
+		}
 		if (!USE_PROFILER) {
 			delete Memory.profiler;
 		}
@@ -199,6 +202,12 @@ export class Mem {
 			operationMode: DEFAULT_OPERATION_MODE,
 			log          : {},
 			enableVisuals: true,
+			resourceCollectionMode: 0,
+			powerCollection: {
+				enabled: false,
+				maxRange: 5,
+				minPower: 5000,
+			},
 		});
 		if (!Memory.stats) {
 			Memory.stats = {};

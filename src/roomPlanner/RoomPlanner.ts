@@ -8,7 +8,7 @@ import {Pathing} from '../movement/Pathing';
 import {BuildPriorities, DemolishStructurePriorities} from '../priorities/priorities_structures';
 import {profile} from '../profiler/decorator';
 import {bullet} from '../utilities/stringConstants';
-import {derefCoords, maxBy, onPublicServer} from '../utilities/utils';
+import {derefCoords, hasMinerals, maxBy, onPublicServer} from '../utilities/utils';
 import {Visualizer} from '../visuals/Visualizer';
 import {MY_USERNAME} from '../~settings';
 import {BarrierPlanner} from './BarrierPlanner';
@@ -16,6 +16,7 @@ import {bunkerLayout} from './layouts/bunker';
 import {commandCenterLayout} from './layouts/commandCenter';
 import {hatcheryLayout} from './layouts/hatchery';
 import {RoadPlanner} from './RoadPlanner';
+import {DirectiveHaul} from "../directives/resource/haul";
 
 export interface BuildingPlannerOutput {
 	name: string;
@@ -637,6 +638,11 @@ export class RoomPlanner {
 					if (this.colony.level < 4
 						&& (structureType == STRUCTURE_STORAGE || structureType == STRUCTURE_TERMINAL)) {
 						break; // don't destroy terminal or storage when under RCL4 - can use energy inside
+					}
+					if (this.colony.level < 6
+						&& structureType == STRUCTURE_TERMINAL && hasMinerals((<StructureTerminal> structure).store)) {
+						DirectiveHaul.create(structure.pos);
+						break; // don't destroy terminal when under RCL6 if there are resources available.
 					}
 					if (structureType != STRUCTURE_WALL && structureType != STRUCTURE_RAMPART) {
 						this.memory.relocating = true;

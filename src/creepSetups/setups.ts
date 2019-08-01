@@ -23,6 +23,9 @@ export const Roles = {
 	healer    : 'transfuser',
 	bunkerGuard : 'bunkerGuard',
 	dismantler: 'lurker',
+	drill : 'drill',
+	coolant : 'coolant',
+	roomPoisoner: 'salter',
 };
 
 /**
@@ -32,8 +35,9 @@ export const Setups = {
 
 	drones: {
 		extractor: new CreepSetup(Roles.drone, {
-			pattern  : [WORK, WORK, CARRY, MOVE],
+			pattern  : [WORK, WORK, MOVE],
 			sizeLimit: Infinity,
+			prefix: [CARRY, CARRY]
 		}),
 
 		miners: {
@@ -178,7 +182,12 @@ export const Setups = {
 			sizeLimit: 5,
 		}),
 
-	}
+	},
+
+	roomPoisoner: new CreepSetup(Roles.roomPoisoner, {
+		pattern  : [WORK, CARRY, MOVE, MOVE],
+		sizeLimit: 4,
+	}),
 
 };
 
@@ -230,14 +239,19 @@ export const CombatSetups = {
 			sizeLimit: Infinity,
 		}),
 
+		distraction:  new CreepSetup(Roles.ranged, {
+			pattern  : [MOVE, MOVE, MOVE, RANGED_ATTACK, MOVE],
+			sizeLimit: 1,
+		}),
+
 		default: new CreepSetup(Roles.ranged, {
 			pattern  : [RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, MOVE, MOVE, MOVE, MOVE, HEAL],
 			sizeLimit: Infinity,
 		}),
 
 		boosted_T3: new CreepSetup(Roles.ranged, {
-			pattern  : [TOUGH, TOUGH, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK,
-						MOVE, MOVE, HEAL],
+			pattern  : [TOUGH, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK,
+						MOVE, MOVE, HEAL, HEAL],
 			sizeLimit: Infinity,
 		}),
 
@@ -348,5 +362,24 @@ export const CombatSetups = {
 		}),
 
 	},
+
+	drill: {
+		default: new CreepSetup(Roles.drill, {
+			pattern  : [MOVE, ATTACK, ATTACK, MOVE],
+			sizeLimit: Infinity,
+		}),
+	},
+
+	coolant: {
+		default: new CreepSetup(Roles.coolant, {
+			pattern  : [HEAL, MOVE],
+			sizeLimit: Infinity,
+		}),
+		small: new CreepSetup(Roles.coolant, {
+			pattern  : [HEAL, MOVE],
+			sizeLimit: 16,
+		}),
+	}
+
 
 };

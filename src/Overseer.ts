@@ -8,6 +8,7 @@ import {DirectiveOutpost} from './directives/colony/outpost';
 import {DirectiveGuard} from './directives/defense/guard';
 import {DirectiveInvasionDefense} from './directives/defense/invasionDefense';
 import {DirectiveOutpostDefense} from './directives/defense/outpostDefense';
+import {DirectivePoisonRoom} from './directives/offense/poisonRoom';
 import {Directive} from './directives/Directive';
 import {Notifier} from './directives/Notifier';
 import {DirectiveBootstrap} from './directives/situational/bootstrap';
@@ -215,7 +216,7 @@ export class Overseer implements IOverseer {
 				// Place defensive directive after hostiles have been present for a long enough time
 				const safetyData = RoomIntel.getSafetyData(colony.room.name);
 				const invasionIsPersistent = safetyData.unsafeFor > 20;
-				if (invasionIsPersistent) {
+				if (invasionIsPersistent && !DirectivePoisonRoom.isPresent(colony.pos, 'room')) {
 					DirectiveInvasionDefense.createIfNotPresent(colony.controller.pos, 'room');
 				}
 			}
@@ -242,10 +243,14 @@ export class Overseer implements IOverseer {
 			if (alreadyAColony || alreadyAnOutpost) {
 				return false;
 			}
-			const alreadyOwned = RoomIntel.roomOwnedBy(roomName);
-			const alreadyReserved = RoomIntel.roomReservedBy(roomName);
-			const disregardReservations = !onPublicServer() || MY_USERNAME == MUON;
-			if (alreadyOwned || (alreadyReserved && !disregardReservations)) {
+			let alreadyOwned = RoomIntel.roomOwnedBy(roomName);
+			let alreadyReserved = RoomIntel.roomReservedBy(roomName);
+			let isBlocked = Game.flags[roomName+"-Block"] != null;
+			if (isBlocked) {
+				//Game.notify("Room " + roomName + " is blocked, not expanding there.");
+			}
+			let disregardReservations = !onPublicServer() || MY_USERNAME == MUON;
+			if (alreadyOwned || (alreadyReserved && !disregardReservations) || isBlocked) {
 				return false;
 			}
 			const neighboringRooms = _.values(Game.map.describeExits(roomName)) as string[];
@@ -297,7 +302,8 @@ export class Overseer implements IOverseer {
 			}
 			// Place pioneer directives in case the colony doesn't have a spawn for some reason
 			if (Game.time % 25 == 0 && colony.spawns.length == 0 &&
-				!DirectiveClearRoom.isPresent(colony.pos, 'room')) {
+				!DirectiveClearRoom.isPresent(colony.pos, 'room') &&
+				!DirectivePoisonRoom.isPresent(colony.pos, 'room')) {
 				// verify that there are no spawns (not just a caching glitch)
 				const spawns = Game.rooms[colony.name]!.find(FIND_MY_SPAWNS);
 				if (spawns.length == 0) {

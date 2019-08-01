@@ -22,7 +22,9 @@ export let OverlordPriority = {
 		destroy         : 300,
 		healPoint       : 301,
 		siege           : 302,
-		controllerAttack: 399
+		controllerAttack: 399,
+		harass			: 571,
+		roomPoisoner	: 399,
 	},
 
 	colonization: { 			// Colonizing new rooms
@@ -69,6 +71,13 @@ export let OverlordPriority = {
 		sourceReaper : 1000,
 		mineral      : 1001,
 		mine         : 1002,
+		roomIncrement: 5,
+	},
+
+	powerMine: {
+		cool : 1050,
+		drill : 1051,
+		gather : 604,
 		roomIncrement: 5,
 	},
 

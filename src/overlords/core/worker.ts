@@ -12,6 +12,8 @@ import {Cartographer, ROOMTYPE_CONTROLLER} from '../../utilities/Cartographer';
 import {minBy} from '../../utilities/utils';
 import {Zerg} from '../../zerg/Zerg';
 import {Overlord, ZergOptions} from '../Overlord';
+import {DirectiveNukeResponse} from "../../directives/situational/nukeResponse";
+import {Visualizer} from "../../visuals/Visualizer";
 
 /**
  * Spawns general-purpose workers, which maintain a colony, performing actions such as building, repairing, fortifying,
@@ -108,8 +110,10 @@ export class WorkerOverlord extends Overlord {
 		if (this.room.find(FIND_NUKES).length > 0) {
 			for (const rampart of this.colony.room.ramparts) {
 				const neededHits = this.neededRampartHits(rampart);
-				if (rampart.hits < neededHits) {
+				if (rampart.hits < neededHits && rampart.pos.findInRange(FIND_NUKES, 3).length > 0
+					&& DirectiveNukeResponse.shouldReinforceLocation(rampart.pos)) {
 					this.nukeDefenseRamparts.push(rampart);
+					Visualizer.marker(rampart.pos, {color: 'gold'});
 					this.nukeDefenseHitsRemaining[rampart.id] = neededHits - rampart.hits;
 				}
 			}
@@ -132,7 +136,7 @@ export class WorkerOverlord extends Overlord {
 		for (const nuke of rampart.pos.lookFor(LOOK_NUKES)) {
 			neededHits += 10e6;
 		}
-		for (const nuke of rampart.pos.findInRange(FIND_NUKES, 3)) {
+		for (const nuke of rampart.pos.findInRange(FIND_NUKES, 2)) {
 			if (nuke.pos != rampart.pos) {
 				neededHits += 5e6;
 			}
@@ -334,8 +338,15 @@ export class WorkerOverlord extends Overlord {
 
 	private handleWorker(worker: Zerg) {
 		if (worker.carry.energy > 0) {
-			// Upgrade controller if close to downgrade
-			if (this.colony.controller.ticksToDowngrade <= (this.colony.level >= 4 ? 10000 : 2000)) {
+
+			// TODO Add high priority to block controller with ramparts/walls in case of downgrade attack
+			// FIXME workers get stalled at controller in case of downgrade attack
+			// Upgrade controller if close to downgrade or if getting controller attacked/was downgraded
+			const downgradeLevel = CONTROLLER_DOWNGRADE[this.colony.controller.level] *
+				(this.colony.controller.level < 4 ? .3 : .7);
+			if ((!this.colony.controller.upgradeBlocked || this.colony.controller.upgradeBlocked < 30)
+				&& (this.colony.controller.ticksToDowngrade <= downgradeLevel
+					|| this.colony.controller.progress > this.colony.controller.progressTotal)) {
 				if (this.upgradeActions(worker)) return;
 			}
 			// Repair damaged non-road non-barrier structures

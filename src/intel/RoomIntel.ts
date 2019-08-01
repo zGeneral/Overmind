@@ -7,6 +7,11 @@ import {ExpansionEvaluator} from '../strategy/ExpansionEvaluator';
 import {getCacheExpiration, irregularExponentialMovingAverage} from '../utilities/utils';
 import {Zerg} from '../zerg/Zerg';
 import {MY_USERNAME} from '../~settings';
+import {DirectivePowerMine} from "../directives/resource/powerMine";
+import {Cartographer, ROOMTYPE_ALLEY} from "../utilities/Cartographer";
+import {getAllColonies} from "../Colony";
+import {Segmenter} from "../memory/Segmenter";
+import {log} from "../console/log";
 
 const RECACHE_TIME = 2500;
 const OWNED_RECACHE_TIME = 1000;
@@ -351,9 +356,56 @@ export class RoomIntel {
 		return 0;
 	}
 
+	/**
+	 * Find PowerBanks within range of maxRange and power above minPower to mine
+	 * Creates directive to mine it
+	 * TODO refactor when factory resources come out to be more generic
+	 */
+	private static minePowerBanks(room: Room) {
+		let powerSetting = Memory.settings.powerCollection;
+		if (powerSetting.enabled && Game.time % 300 == 0 && Cartographer.roomType(room.name) == ROOMTYPE_ALLEY) {
+			let powerBank = _.first(room.find(FIND_STRUCTURES).filter(struct => struct.structureType == STRUCTURE_POWER_BANK)) as StructurePowerBank;
+			if (powerBank != undefined && powerBank.ticksToDecay > 4000 && powerBank.power >= powerSetting.minPower) {
+				Game.notify(`Looking for power banks in ${room}  found ${powerBank} with power ${powerBank.power} and ${powerBank.ticksToDecay} TTL.`);
+				if (DirectivePowerMine.isPresent(powerBank.pos, 'pos')) {
+					Game.notify(`Already mining room ${powerBank.room}!`);
+					return;
+				}
+
+				let colonies = getAllColonies().filter(colony => colony.level > 6);
+
+				for (let colony of colonies) {
+					let route = Game.map.findRoute(colony.room, powerBank.room);
+					if (route != -2  && route.length <= powerSetting.maxRange) {
+						Game.notify(`FOUND POWER BANK IN RANGE ${route.length}, STARTING MINING ${powerBank.room}`);
+						DirectivePowerMine.create(powerBank.pos);
+						return;
+					}
+				}
+
+			}
+		}
+	}
+
+	static requestZoneData() {
+		const checkOnTick = 123;
+		if (Game.time % 1000 == checkOnTick - 2) {
+			Segmenter.requestForeignSegment('LeagueOfAutomatedNations', 96);
+		} else if (Game.time % 1000 == checkOnTick - 1 ) {
+			const loanData = Segmenter.getForeignSegment();
+			if (loanData) {
+				Memory.zoneRooms = loanData;
+			} else {
+				log.error('Empty LOAN data');
+			}
+		}
+	}
+
 
 	static run(): void {
 		let alreadyComputedScore = false;
+		this.requestZoneData();
+
 		for (const name in Game.rooms) {
 
 			const room: Room = Game.rooms[name];
@@ -390,7 +442,7 @@ export class RoomIntel {
 			if (room.controller && Game.time % 5 == 0) {
 				this.recordControllerInfo(room.controller);
 			}
-
+			this.minePowerBanks(room);
 		}
 	}
 
