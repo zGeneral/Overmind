@@ -1,4 +1,11 @@
 type operationMode = 'manual' | 'semiautomatic' | 'automatic';
+/**
+ * 0: Basic
+ * 1: Collect from enemy storage/terminal
+ * 2: Collect from all sources TBD
+ * 3: Collect all and mine walls for energy TBD
+ */
+type resourceCollectionMode = number;
 
 interface RawMemory {
 	_parsed: any;
@@ -21,7 +28,8 @@ interface Memory {
 		operationMode: operationMode;
 		log: LoggerMemory;
 		enableVisuals: boolean;
-	};
+		resourceCollectionMode: resourceCollectionMode;
+	}
 	profiler?: any;
 	stats: any;
 	constructionSites: { [id: string]: number };

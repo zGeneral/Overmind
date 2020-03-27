@@ -26,6 +26,7 @@ export class OvermindConsole {
 		global.setLogLevel = log.setLogLevel;
 		global.suspendColony = this.suspendColony;
 		global.unsuspendColony = this.unsuspendColony;
+		global.listSuspendedColonies = this.listSuspendedColonies;
 		global.openRoomPlanner = this.openRoomPlanner;
 		global.closeRoomPlanner = this.closeRoomPlanner;
 		global.cancelRoomPlanner = this.cancelRoomPlanner;
@@ -68,6 +69,7 @@ export class OvermindConsole {
 		descr['setLogLevel(int)'] = 'set the logging level from 0 - 4';
 		descr['suspendColony(roomName)'] = 'suspend operations within a colony';
 		descr['unsuspendColony(roomName)'] = 'resume operations within a suspended colony';
+		descr['listSuspendedColonies()'] = 'Prints all suspended colonies';
 		descr['openRoomPlanner(roomName)'] = 'open the room planner for a room';
 		descr['closeRoomPlanner(roomName)'] = 'close the room planner and save changes';
 		descr['cancelRoomPlanner(roomName)'] = 'close the room planner and discard changes';
@@ -248,6 +250,17 @@ export class OvermindConsole {
 		} else {
 			return `No colony memory for ${roomName}!`;
 		}
+	}
+
+	static listSuspendedColonies(): string {
+		let msg = 'Colonies currently suspended: \n';
+		for (let i in Memory.colonies) {
+			let colonyMemory = Memory.colonies[i] as ColonyMemory | undefined;
+			if (colonyMemory && colonyMemory.suspend == true) {
+				msg += 'Colony ' + i + ' \n';
+			}
+		}
+		return msg;
 	}
 
 	// Room planner control ============================================================================================
